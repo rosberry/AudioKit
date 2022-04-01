@@ -7,7 +7,7 @@ import Foundation
 /// MIDI File Track
 public struct MIDIFileTrack {
 
-    var chunk: MIDIFileTrackChunk
+    public var chunk: MIDIFileTrackChunk
 
     /// Channel events
     public var channelEvents: [MIDIEvent] {

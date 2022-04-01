@@ -4,13 +4,13 @@ import Foundation
 
 /// MIDI File Chunk Event
 public struct MIDIFileChunkEvent {
-    let data: [MIDIByte] // all data passed in
-    let timeFormat: MIDITimeFormat
-    let timeDivision: Int
-    let runningStatus: MIDIStatus?
-    let timeOffset: Int //accumulated time from previous events
+    public let data: [MIDIByte] // all data passed in
+    public let timeFormat: MIDITimeFormat
+    public let timeDivision: Int
+    public let runningStatus: MIDIStatus?
+    public let timeOffset: Int //accumulated time from previous events
 
-    init(data: [MIDIByte],
+    public init(data: [MIDIByte],
          timeFormat: MIDITimeFormat,
          timeDivision: Int,
          timeOffset: Int,
@@ -23,8 +23,8 @@ public struct MIDIFileChunkEvent {
     }
 
     // computedData adds the status if running status was used
-    var computedData: [MIDIByte] {
-        var outData = [MIDIByte]()
+    public var computedData: [MIDIByte] {
+        public var outData = [MIDIByte]()
         if let addStatus = runningStatus {
             outData.append(addStatus.byte)
         }
@@ -33,31 +33,31 @@ public struct MIDIFileChunkEvent {
     }
 
     // just the event data, no timing info
-    var rawEventData: [MIDIByte] {
+    public var rawEventData: [MIDIByte] {
         return Array(data.suffix(from: timeLength))
     }
 
-    var vlq: MIDIVariableLengthQuantity? {
+    public var vlq: MIDIVariableLengthQuantity? {
         return MIDIVariableLengthQuantity(fromBytes: data)
     }
 
-    var timeLength: Int {
+    public var timeLength: Int {
         return vlq?.length ?? 0
     }
 
-    var deltaTime: Int {
+    public var deltaTime: Int {
         return Int(vlq?.quantity ?? 0)
     }
 
-    var absoluteTime: Int {
+    public var absoluteTime: Int {
         return deltaTime + timeOffset
     }
 
-    var position: Double {
+    public var position: Double {
         return Double(absoluteTime) / Double(timeDivision)
     }
 
-    var typeByte: MIDIByte? {
+    public var typeByte: MIDIByte? {
         if let runningStatus = self.runningStatus {
             return runningStatus.byte
         }
@@ -67,7 +67,7 @@ public struct MIDIFileChunkEvent {
         return nil
     }
 
-    var typeIndex: Int? {
+    public var typeIndex: Int? {
         if data.count > timeLength {
             if data[timeLength] == 0xFF,
                 data.count > timeLength + 1 { //is Meta-Event
@@ -81,7 +81,7 @@ public struct MIDIFileChunkEvent {
         return nil
     }
 
-    var length: Int {
+    public var length: Int {
         if let metaEvent = event as? MIDICustomMetaEvent {
             return metaEvent.length
         } else if let status = event as? MIDIStatus {
@@ -100,7 +100,7 @@ public struct MIDIFileChunkEvent {
         return 0
     }
 
-    var event: MIDIMessage? {
+    public var event: MIDIMessage? {
         if let meta = MIDICustomMetaEvent(data: rawEventData) {
             return meta
         } else if let type = typeByte {

@@ -53,7 +53,7 @@ public enum MIDISystemCommand: MIDIByte, MIDIMessage {
         }
     }
 
-    var length: Int? {
+    public var length: Int? {
         switch self {
         case .sysReset, .activeSensing, .start, .stop, .continue, .clock, .tuneRequest:
             return 1

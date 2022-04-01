@@ -10,7 +10,7 @@ public struct MIDIFile {
     /// File name
     public var filename: String
     
-    var chunks: [MIDIFileChunk] = []
+    public var chunks: [MIDIFileChunk] = []
 
     var headerChunk: MIDIFileHeaderChunk? {
         return chunks.first(where: { $0.isHeader }) as? MIDIFileHeaderChunk
