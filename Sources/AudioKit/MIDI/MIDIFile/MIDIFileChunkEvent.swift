@@ -24,7 +24,7 @@ public struct MIDIFileChunkEvent {
 
     // computedData adds the status if running status was used
     public var computedData: [MIDIByte] {
-        public var outData = [MIDIByte]()
+        var outData = [MIDIByte]()
         if let addStatus = runningStatus {
             outData.append(addStatus.byte)
         }
