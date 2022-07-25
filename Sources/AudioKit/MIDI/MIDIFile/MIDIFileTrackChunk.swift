@@ -91,7 +91,8 @@ public struct MIDIFileTrackChunk: MIDIFileChunk {
                                                  runningStatus: status)
                     processedBytes += messageLength
                 } else {
-                    fatalError("error parsing midi file, byte is \(byte), processed \(processedBytes) of \(data.count)")
+                    // fatalError("error parsing midi file, byte is \(byte), processed \(processedBytes) of \(data.count)")
+                    return []
                 }
                 guard let currentEvent = event else { break }
                 events.append(currentEvent)
