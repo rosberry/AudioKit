@@ -10,7 +10,7 @@ public struct MIDIFile {
     /// File name
     public var filename: String
     
-    var chunks: [MIDIFileChunk] = []
+    public var chunks: [MIDIFileChunk] = []
 
     var headerChunk: MIDIFileHeaderChunk? {
         return chunks.first(where: { $0.isHeader }) as? MIDIFileHeaderChunk
@@ -99,6 +99,15 @@ public struct MIDIFile {
     /// - Parameter path: Path to MIDI FIle
     public init(path: String) {
         self.init(url: URL(fileURLWithPath: path))
+    }
+
+    public func write(to url: URL) throws {
+        var data: [UInt8] = []
+        for chunk in chunks {
+            let recomposedData = chunk.recompose()
+            data.append(contentsOf: recomposedData)
+        }
+        try Data(data).write(to: url)
     }
 }
 

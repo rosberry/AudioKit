@@ -5,7 +5,8 @@ import Foundation
 /// MIDI File Track Chunk
 public struct MIDIFileTrackChunk: MIDIFileChunk {
     /// Raw data as array of MIDI Bytes
-    public let rawData: [MIDIByte]
+    public private(set) var rawData: [MIDIByte]
+    private var processedData: [MIDIByte] = []
 
     let timeFormat: MIDITimeFormat
     let timeDivision: Int
@@ -66,10 +67,16 @@ public struct MIDIFileTrackChunk: MIDIFileChunk {
                 } else if let sysExEvent = MIDISysExMessage(bytes: subData) {
                     let sysExData = sysExEvent.data
                     event = MIDIFileChunkEvent(data: vlqTime.data + sysExData,
-                                                 timeFormat: timeFormat,
-                                                 timeDivision: timeDivision,
-                                                 timeOffset: accumulatedDeltaTime)
-                    processedBytes += sysExEvent.data.count
+                                               timeFormat: timeFormat,
+                                               timeDivision: timeDivision,
+                                               timeOffset: accumulatedDeltaTime)
+                    if let endIndex = sysExEvent.data.lastIndex(of: 0xF7) {
+                        processedBytes += endIndex + 1
+                    }
+                    else {
+                        processedBytes += sysExEvent.data.count
+                    }
+
                     runningStatus = nil
                 } else if let status = MIDIStatus(byte: byte) {
                     let messageLength = status.length
@@ -91,7 +98,6 @@ public struct MIDIFileTrackChunk: MIDIFileChunk {
                                                  runningStatus: status)
                     processedBytes += messageLength
                 } else {
-                    // fatalError("error parsing midi file, byte is \(byte), processed \(processedBytes) of \(data.count)")
                     return []
                 }
                 guard let currentEvent = event else { break }
@@ -101,5 +107,85 @@ public struct MIDIFileTrackChunk: MIDIFileChunk {
             }
         }
         return events
+    }
+
+    public func recompose() -> [MIDIByte] {
+        var processedData: [MIDIByte] = Array(rawData.prefix(8))
+        var accumulatedDeltaTime = 0
+        var currentTimeVLQ: MIDIVariableLengthQuantity?
+        var runningStatus: MIDIByte?
+        var processedBytes = 0
+        var shouldSkipNextVLQ: Bool = false
+        while processedBytes < data.count {
+            let subData = Array(data.suffix(from: processedBytes))
+            let byte = data[processedBytes]
+            if currentTimeVLQ == nil, let vlqTime = MIDIVariableLengthQuantity(fromBytes: subData) {
+                currentTimeVLQ = vlqTime
+                processedBytes += vlqTime.length
+                if shouldSkipNextVLQ == false {
+                    processedData.append(contentsOf: vlqTime.data)
+                }
+                shouldSkipNextVLQ = false
+            } else if let vlqTime = currentTimeVLQ {
+                var event: MIDIFileChunkEvent?
+                if let metaEvent = MIDICustomMetaEvent(data: subData) {
+                    let metaData = metaEvent.data
+                    event = MIDIFileChunkEvent(data: vlqTime.data + metaData,
+                                                 timeFormat: timeFormat,
+                                                 timeDivision: timeDivision,
+                                                 timeOffset: accumulatedDeltaTime)
+                    processedBytes += metaEvent.data.count
+                    runningStatus = nil
+                } else if let sysExEvent = MIDISysExMessage(bytes: subData) {
+                    let sysExData = sysExEvent.data
+                    var sysexChunk = MIDIFileChunkEvent(data: vlqTime.data + sysExData,
+                                                        timeFormat: timeFormat,
+                                                        timeDivision: timeDivision,
+                                                        timeOffset: accumulatedDeltaTime)
+                    if let endIndex = sysExEvent.data.lastIndex(of: 0xF7) {
+                        processedBytes += endIndex + 1
+                        sysexChunk.trim(length: sysExEvent.data.count)
+                        shouldSkipNextVLQ = true
+                    }
+                    else {
+                        processedBytes += sysExEvent.data.count
+                    }
+
+                    runningStatus = nil
+                    //event = sysexChunk
+
+                } else if let status = MIDIStatus(byte: byte) {
+                    let messageLength = status.length
+                    let chunkData = Array(subData.prefix(messageLength))
+                    event = MIDIFileChunkEvent(data: vlqTime.data + chunkData,
+                                                 timeFormat: timeFormat,
+                                                 timeDivision: timeDivision,
+                                                 timeOffset: accumulatedDeltaTime)
+                    runningStatus = status.byte
+                    processedBytes += messageLength
+                } else if let activeRunningStatus = runningStatus,
+                    let status = MIDIStatus(byte: activeRunningStatus) {
+                    let messageLength = status.length - 1 // drop one since running status is used
+                    let chunkData = Array(subData.prefix(messageLength))
+                    event = MIDIFileChunkEvent(data: vlqTime.data + chunkData,
+                                                 timeFormat: timeFormat,
+                                                 timeDivision: timeDivision,
+                                                 timeOffset: accumulatedDeltaTime,
+                                                 runningStatus: status)
+                    processedBytes += messageLength
+                } else {
+                    return processedData
+                }
+
+                if let currentEvent = event {
+                    processedData.append(contentsOf: currentEvent.rawEventData)
+                }
+
+                accumulatedDeltaTime += Int(vlqTime.quantity)
+                currentTimeVLQ = nil
+            }
+        }
+
+        return processedData
     }
 }

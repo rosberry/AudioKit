@@ -16,6 +16,8 @@ public protocol MIDIFileChunk {
     /// Initialize with data
     /// - Parameter data: MIDI Byte array
     init?(data: [MIDIByte])
+
+    func recompose() -> [MIDIByte]
 }
 
 /// Default behavior for MIDI FIle Chunks

@@ -73,4 +73,7 @@ struct MIDIFileHeaderChunk: MIDIFileChunk {
         return MIDIHelper.convertTo16Bit(msb: data[4], lsb: data[5])
     }
 
+    public func recompose() -> [MIDIByte] {
+        return rawData
+    }
 }
